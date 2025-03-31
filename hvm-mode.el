@@ -16,62 +16,62 @@
 
 ;; Define custom faces with exact colors from the palette
 (defface hvm-keyword-face
-  '((t (:foreground "#fb4934")))  ;; rose
+  '((t (:inherit font-lock-keyword-face)))
   "Face for HVM keywords."
   :group 'hvm-faces)
 
 (defface hvm-variable-face
-  '((t (:foreground "#ebdbb2" :italic t)))  ;; fg, italic
+  '((t (:inherit font-lock-variable-name-face :italic t)))
   "Face for HVM variables."
   :group 'hvm-faces)
 
 (defface hvm-function-face
-  '((t (:foreground "#fbf1c7" :italic t)))  ;; fg-light, italic
+  '((t (:inherit font-lock-function-name-face :italic t)))
   "Face for HVM functions (e.g., @fn)."
   :group 'hvm-faces)
 
 (defface hvm-constructor-face
-  '((t (:foreground "#fe8019")))  ;; orange
+  '((t (:inherit font-lock-type-face)))
   "Face for HVM constructors (e.g., #Ctr)."
   :group 'hvm-faces)
 
 (defface hvm-number-face
-  '((t (:foreground "#fe8019")))  ;; orange
+  '((t (:inherit font-lock-constant-face)))
   "Face for HVM numbers."
   :group 'hvm-faces)
 
 (defface hvm-char-face
-  '((t (:foreground "#bdae93" :italic t)))  ;; fg-mid, italic
+  '((t (:inherit font-lock-string-face :italic t)))
   "Face for HVM characters."
   :group 'hvm-faces)
 
 (defface hvm-operator-face
-  '((t (:foreground "#fb4934")))  ;; rose
+  '((t (:inherit font-lock-builtin-face)))
   "Face for HVM operators."
   :group 'hvm-faces)
 
 (defface hvm-lambda-face
-  '((t (:foreground "#ebdbb2")))  ;; fg
+  '((t (:inherit font-lock-builtin-face)))
   "Face for HVM lambda symbols."
   :group 'hvm-faces)
 
 (defface hvm-super-face
-  '((t (:foreground "#fabd2f" :italic t)))  ;; wood, italic
+  '((t (:inherit font-lock-variable-name-face :italic t)))
   "Face for HVM superpositions (e.g., &L)."
   :group 'hvm-faces)
 
 (defface hvm-match-face
-  '((t (:foreground "#83a598")))  ;; water
+  '((t (:inherit font-lock-keyword-face)))
   "Face for HVM match expressions."
   :group 'hvm-faces)
 
 (defface hvm-comment-face
-  '((t (:foreground "#bdae93" :italic t)))  ;; fg-mid, italic
+  '((t (:inherit font-lock-comment-face :italic t)))
   "Face for HVM comments."
   :group 'hvm-faces)
 
 (defface hvm-parens-face
-  '((t (:foreground "#727272")))  ;; ngrey-mid
+  '((t (:inherit default)))
   "Face for HVM parentheses and braces."
   :group 'hvm-faces)
 
