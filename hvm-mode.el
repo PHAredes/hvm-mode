@@ -19,9 +19,19 @@
   "Syntax table for `hvm-mode'.")
 
 ;; Define custom faces (unchanged from original)
-(defface hvm-keyword-face
+(defface hvm-declaration-face
+  '((t (:inherit font-lock-keyword-face :weight bold)))
+  "Face for HVM declaration keywords."
+  :group 'hvm-faces)
+
+(defface hvm-definition-face
   '((t (:inherit font-lock-keyword-face)))
-  "Face for HVM keywords."
+  "Face for HVM definition keywords."
+  :group 'hvm-faces)
+
+(defface hvm-control-face
+  '((t (:inherit font-lock-keyword-face)))
+  "Face for HVM control keywords."
   :group 'hvm-faces)
 
 (defface hvm-variable-face
@@ -31,7 +41,7 @@
 
 (defface hvm-function-face
   '((t (:inherit font-lock-function-name-face)))
-  "Face for HVM functions (e.g., @fn)."
+  "Face for HVM functions (e.g., `@fn` `def fn`)."
   :group 'hvm-faces)
 
 (defface hvm-constructor-face
@@ -56,7 +66,7 @@
 
 (defface hvm-symbols-face
   '((t (:inherit font-lock-builtin-face)))
-  "Face for HVM symbols (~ @ λ)."
+  "Face for HVM symbols (~ @ λ Π ∀)."
   :group 'hvm-faces)
 
 (defface hvm-sup-face
@@ -79,23 +89,34 @@
   "Face for HVM let bindings."
   :group 'hvm-faces)
 
-;; Define HVM keywords and operators
-(defvar hvm-keywords
+;; Separate hvm-keywords into 3 patterns and faces
+(defvar hvm-declaration-keywords
   '("data" "import")
-  "HVM keywords.")
+  "HVM declaration keywords.")
+
+(defvar hvm-definition-keywords
+  '("gen" "def" "switch" "match" "let" "view")
+  "HVM definition keywords.")
+
+(defvar hvm-control-keywords
+  '("next" "case" "if" "else" "elif")
+  "HVM control keywords.")
 
 (defvar hvm-operators
   '("+" "-" "*" "/" "%" "=" "!" "&" "|" "^" "<" ">" "<<" "<=" ">>" ">=" "==")
   "HVM operators, including compound operators like ==.")
 
-;; Convert lists to regex patterns
-(defvar hvm-keywords-regexp
-  (regexp-opt hvm-keywords 'words)
-  "Regexp for HVM keywords.")
+(defvar hvm-declaration-keywords-regexp
+  (concat "\\(^\\|[^#]\\)" (regexp-opt hvm-declaration-keywords 'words)) ; MODIFICADO AQUI: \r removido
+  "Regexp for HVM declaration keywords.")
 
-(defvar hvm-keywords-adjusted-regexp
-  (concat "\\(^\\|[^#]\\)" hvm-keywords-regexp)
-  "Regexp for HVM keywords, adjusted to not match inside constructors.")
+(defvar hvm-definition-keywords-regexp
+  (concat "\\(^\\|[^#]\\)" (regexp-opt hvm-definition-keywords 'words))
+  "Regexp for HVM definition keywords.")
+
+(defvar hvm-control-keywords-regexp
+  (concat "\\(^\\|[^#]\\)" (regexp-opt hvm-control-keywords 'words))
+  "Regexp for HVM control keywords.")
 
 (defvar hvm-operators-regexp
   (concat (regexp-opt hvm-operators t) "\\s-+")
@@ -110,15 +131,15 @@
   "Regexp for HVM duplications (!&).")
 
 (defvar hvm-constructor-regexp
-  "#[A-Za-z0-9_]+\\|#\."
-  "Regexp for HVM constructors (e.g., #Nil, #Cons, #.).")
+  "\\(#\\([A-Za-z0-9_]+\\)\\|#\\.\\|<>\\|->\\)"
+  "Regexp for HVM constructors (e.g., #Nil, #Cons, #., [], <>, ->, ?).")
 
 (defvar hvm-datatype-regexp
   "\\<data\\s-+\\([A-Za-z0-9_]+\\)"
   "Regexp for HVM datatype names after `data` (e.g., Nat in `data Nat`).")
 
 (defvar hvm-function-regexp
-  "@\\([a-zA-Z0-9_]+\\)"
+  "\\(?:@\\|def \\|gen \\)\\([a-zA-Z0-9_]+\\)"
   "Regexp for HVM functions (e.g., @fn, highlighting the identifier after @).")
 
 (defvar hvm-erasure-regexp
@@ -126,11 +147,11 @@
   "Regexp for HVM erasure symbol (*).")
 
 (defvar hvm-symbols-regexp
-  "[~@λ]"
-  "Regexp for HVM symbols (~ @ λ).")
+  "[~@λΠ∀]"
+  "Regexp for HVM symbols (~ @ λ ∀ Π).")
 
 (defvar hvm-number-regexp
-  "\\<\\d+\\>"
+  "\\<[0-9]+\\>"
   "Regexp for HVM numeric literals (e.g., 123).")
 
 (defvar hvm-char-regexp
@@ -155,10 +176,14 @@
     (,hvm-dup-regexp . 'hvm-sup-face)
     ;; Superpositions: &
     (,hvm-sup-regexp . 'hvm-sup-face)
-    ;; Symbols: ~ @ λ
+    ;; Symbols: ~ @ λ ∀ Π
     (,hvm-symbols-regexp . 'hvm-symbols-face)
-    ;; Keywords: data import
-    (,hvm-keywords-adjusted-regexp 2 'hvm-keyword-face)
+    ;; Declaration keywords: data import
+    (,hvm-declaration-keywords-regexp 2 'hvm-declaration-face) ; MODIFICADO AQUI: usa subexpressão 2
+    ;; Definition keywords: gen def
+    (,hvm-definition-keywords-regexp 2 'hvm-definition-face) ; MODIFICADO AQUI: usa subexpressão 2
+    ;; Control keywords: next switch case ...
+    (,hvm-control-keywords-regexp 2 'hvm-control-face) ; MODIFICADO AQUI: usa subexpressão 2
     ;; Constructors: #Name
     (,hvm-constructor-regexp . 'hvm-constructor-face)
     ;; Datatype names: after data
@@ -173,7 +198,7 @@
     (,hvm-erasure-regexp . 'hvm-operator-face)
     ;; Numbers: 123
     (,hvm-number-regexp . 'hvm-number-face)
-    ;; Characters: 'a'
+    ;; Characters: 'a'|'b'
     (,hvm-char-regexp . 'hvm-char-face)
     ;; Comments: //
     (,hvm-comment-regexp . 'hvm-comment-face)
@@ -315,8 +340,8 @@ and returns them as a single string with preserved newlines."
 (defvar hvm-mode-map
   (let ((map (make-sparse-keymap)))
     ;; Base commands (Agda-like)
-    (define-key map (kbd "C-c C-;") 'hvm-run)         ;; hvm run (load/run) no flags
-    (define-key map (kbd "C-c h") 'hvm-help)          ;; hvm help
+    (define-key map (kbd "C-c C-;") 'hvm-run)        ;; hvm run (load/run) no flags
+    (define-key map (kbd "C-c h") 'hvm-help)         ;; hvm help
 
     ;; Single flags (inspired by Agda conventions)
     (define-key map (kbd "C-c C-t") 'hvm-run-typecheck) ;; -t (type checking)
@@ -325,11 +350,11 @@ and returns them as a single string with preserved newlines."
     (define-key map (kbd "C-c C-q") 'hvm-run-no-quotes) ;; -Q (no quotes)
 
     ;; Custom commands
-    (define-key map (kbd "C-c C-c") 'hvm-run-find-first)       ;; -C1 (find)
-    (define-key map (kbd "C-c C-x") 'hvm-run-with-flags)       ;; Prompt for flags
+    (define-key map (kbd "C-c C-c") 'hvm-run-find-first)      ;; -C1 (find)
+    (define-key map (kbd "C-c C-x") 'hvm-run-with-flags)      ;; Prompt for flags
 
     ;; ERI indentation bindings
-    (define-key map (kbd "TAB") 'eri-indent)                     ;; Indent
+    (define-key map (kbd "TAB") 'eri-indent)                 ;; Indent
     (define-key map (kbd "S-<iso-lefttab>") 'eri-indent-reverse) ;; Reverse indent
     (define-key map (kbd "S-<lefttab>") 'eri-indent-reverse)     ;; Reverse indent
     (define-key map (kbd "S-<tab>") 'eri-indent-reverse)         ;; Reverse indent
@@ -348,7 +373,7 @@ and returns them as a single string with preserved newlines."
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hvm\\'" . hvm-mode))
 (add-to-list 'auto-mode-alist '("\\.hvm\\.md\\'" . hvm-mode))
+(add-to-list 'auto-mode-alist '("\\.kolmo'" . hvm-mode))
 
 (provide 'hvm-mode)
-
 ;;; hvm-mode.el ends here
