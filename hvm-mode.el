@@ -1,9 +1,11 @@
-;;; hvm-mode.el --- Major mode for editing HVM3 files. -*- coding: utf-8; lexical-binding: t; -*-
+;;; hvm-mode.el --- Major mode for editing HVM3 files with syntax highlighting and keybindings -*- coding: utf-8; lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Syntax highlighting for HVM3 language, styled to match Agda-like highlighting.
+;; Syntax highlighting for HVM3 language with keybindings for running HVM commands.
 
 ;;; Code:
+
+;; Syntax table
 (defvar hvm-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; Treat underscore as part of words
@@ -80,12 +82,11 @@
   "Face for HVM let bindings"
   :group 'hvm-faces)
 
-;; Define HVM keywords
+;; Define HVM keywords and operators
 (defvar hvm-keywords
   '("data" "import")
   "HVM keywords.")
 
-;; Define HVM operators
 (defvar hvm-operators
   '("+" "-" "*" "/" "%" "=" "!" "&" "|" "^" "<" ">" "<<" "<=" ">>" ">=")
   "HVM operators.")
@@ -147,11 +148,11 @@
   "[{}()[\\]]\\|}[{]\\|)\\("
   "Regexp for HVM delimiter pairs (e.g., { }, ( ), [ ]).")
 
-;; Regexp for let bindings (!, !!, !^) as built-ins
 (defvar hvm-let-bindings-regexp
   "\\(!\\^?\\|!!\\)\\s-"
   "Regexp for HVM let bindings (!, !!, !^) followed by whitespace.")
 
+;; Font-lock keywords
 (defvar hvm-font-lock-keywords
   `(;; Symbols: ~ @ λ (highest priority)
     (,hvm-symbols-regexp . 'hvm-symbols-face)
@@ -179,6 +180,101 @@
     (,hvm-variable-regexp . 'hvm-variable-face)
     (,hvm-delimiters-regexp . 'hvm-delimiters-face))
   "Keyword highlighting for HVM mode.")
+
+;; Helper functions for HVM commands
+(defun hvm--get-current-file ()
+  "Get the current HVM file name."
+  (if (buffer-file-name)
+      (file-name-nondirectory (buffer-file-name))
+    (error "No file associated with this buffer")))
+
+(defun hvm-help ()
+  "Run `hvm help`."
+  (interactive)
+  (shell-command "hvm help"))
+
+(defun hvm-run ()
+  "Run `hvm run <file>`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)))))
+
+(defun hvm-run-type ()
+  "Run `hvm run <file> -t`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -t")))
+
+(defun hvm-run-compiled ()
+  "Run `hvm run <file> -c`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c")))
+
+(defun hvm-run-collapse ()
+  "Run `hvm run <file> -C`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -C")))
+
+(defun hvm-run-collapse-1 ()
+  "Run `hvm run <file> -C1`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -C1")))
+
+(defun hvm-run-stats ()
+  "Run `hvm run <file> -s`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -s")))
+
+(defun hvm-run-debug ()
+  "Run `hvm run <file> -d`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -d")))
+
+(defun hvm-run-no-quotes ()
+  "Run `hvm run <file> -Q`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -Q")))
+
+(defun hvm-run-compiled-collapse ()
+  "Run `hvm run <file> -c -C`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -C")))
+
+(defun hvm-run-compiled-stats ()
+  "Run `hvm run <file> -c -s`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -s")))
+
+(defun hvm-run-compiled-debug ()
+  "Run `hvm run <file> -c -d`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -d")))
+
+(defun hvm-run-find-next ()
+  "Run `hvm run <file> -c -C1 -s`."
+  (interactive)
+  (shell-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -C1 -s")))
+
+;; Keymap for hvm-mode
+(defvar hvm-mode-map
+  (let ((map (make-sparse-keymap)))
+    ;; Base commands
+    (define-key map (kbd "C-c h") 'hvm-help)              ;; hvm help
+    (define-key map (kbd "C-c r") 'hvm-run)               ;; hvm run <file>
+    ;; Single flags
+    (define-key map (kbd "C-c t") 'hvm-run-type)          ;; -t (type)
+    (define-key map (kbd "C-c c") 'hvm-run-compiled)      ;; -c (compiled)
+    (define-key map (kbd "C-c C") 'hvm-run-collapse)      ;; -C (collapse)
+    (define-key map (kbd "C-c 1") 'hvm-run-collapse-1)    ;; -C1 (collapse with N=1)
+    (define-key map (kbd "C-c s") 'hvm-run-stats)         ;; -s (stats)
+    (define-key map (kbd "C-c d") 'hvm-run-debug)         ;; -d (debug)
+    (define-key map (kbd "C-c q") 'hvm-run-no-quotes)     ;; -Q (no quotes)
+    ;; Common combinations
+    (define-key map (kbd "C-c C-c") 'hvm-run-compiled-collapse)  ;; -c -C
+    (define-key map (kbd "C-c C-s") 'hvm-run-compiled-stats)     ;; -c -s
+    (define-key map (kbd "C-c C-d") 'hvm-run-compiled-debug)     ;; -c -d
+    ;; Custom keybind
+    (define-key map (kbd "C-c C-l") 'hvm-run-find-next)   ;; Custom: -c -C1 -s
+    map)
+  "Keymap for `hvm-mode'.")
 
 ;;;###autoload
 (define-derived-mode hvm-mode prog-mode "HVM3"
