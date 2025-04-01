@@ -55,9 +55,9 @@
   "Face for HVM symbols (~ @ ! λ)."
   :group 'hvm-faces)
 
-(defface hvm-supdup-face
+(defface hvm-sup-face
   '((t (:inherit font-lock-variable-name-face :italic t)))
-  "Face for HVM superpositions and duplications (e.g., &L, !x)."
+  "Face for HVM superpositions and duplications (e.g., &L, ! &n{x0 x1} = y)."
   :group 'hvm-faces)
 
 (defface hvm-datatype-face
@@ -75,20 +75,20 @@
   "Face for HVM parentheses and braces."
   :group 'hvm-faces)
 
-;; Define HVM keywords, operators, and prefixes
+(defface hvm-let-bindings-face
+  '((t (:inherit font-lock-builtin-face)))
+  "Face for HVM let bindings"
+  :group 'hvm-faces)
+
+;; Define HVM keywords
 (defvar hvm-keywords
-  '("Era" "Lam" "Sup" "App" "Op2" "Ctr" "Ref" "Mat" "Let" "Dup"
-    "If" "Chr" "U32" "Str" "Nil" "Cons" "ADT" "data" "import"
-    "package" "module" "where" "infix")
+  '("data" "import")
   "HVM keywords.")
 
+;; Define HVM operators
 (defvar hvm-operators
-  '("+" "-" "*" "/" "%" "=" "<" ">" "<<" ">>" "<=" ">=" "^" "|")
+  '("+" "-" "*" "/" "%" "=" "!" "&" "|" "^" "<" ">" "<<" "<=" ">>" ">=")
   "HVM operators.")
-
-(defvar hvm-prefixes
-  '("&" "!")
-  "HVM prefixes for superpositions and duplications.")
 
 ;; Convert lists to regex patterns
 (defvar hvm-keywords-regexp
@@ -100,12 +100,12 @@
   "Regexp for HVM keywords, adjusted to not match inside constructors.")
 
 (defvar hvm-operators-regexp
-  (regexp-opt hvm-operators t)
-  "Regexp for HVM operators.")
+  (concat (regexp-opt hvm-operators t) "\\s-+")
+  "Regexp for HVM operators, requiring a space after the operator.")
 
 (defvar hvm-prefixes-regexp
-  (concat "\\(" (regexp-opt hvm-prefixes t) "\\)[A-Za-z0-9_]+")
-  "Regexp for HVM superpositions and duplications with prefixes like & or !.")
+  "\\(&\\)\\([0-9]+\\|{\\)"
+  "Regexp for HVM sup and dup with & followed by a number or {.")
 
 (defvar hvm-constructor-regexp
   "#[A-Za-z0-9_]+\\|#\."
@@ -120,12 +120,12 @@
   "Regexp for HVM functions (e.g., @fn, highlighting the identifier after @).")
 
 (defvar hvm-erasure-regexp
-  "\\*"
+  (regexp-opt '("*") t)
   "Regexp for HVM erasure symbol (*).")
 
 (defvar hvm-symbols-regexp
-  "[~@!λ]"
-  "Regexp for HVM symbols ({ } ( ) ~ @ ! λ).")
+  "[~@λ]"
+  "Regexp for HVM symbols (~ @ λ).")
 
 (defvar hvm-number-regexp
   "\\<\\d+\\>"
@@ -147,8 +147,13 @@
   "[{}()[\\]]\\|}[{]\\|)\\("
   "Regexp for HVM delimiter pairs (e.g., { }, ( ), [ ]).")
 
+;; Regexp for let bindings (!, !!, !^) as built-ins
+(defvar hvm-let-bindings-regexp
+  "\\(!\\^?\\|!!\\)\\s-"
+  "Regexp for HVM let bindings (!, !!, !^) followed by whitespace.")
+
 (defvar hvm-font-lock-keywords
-  `(;; Symbols: { } ( ) ~ @ ! λ (highest priority)
+  `(;; Symbols: ~ @ λ (highest priority)
     (,hvm-symbols-regexp . 'hvm-symbols-face)
     ;; Adjusted Keywords to not match inside constructors
     (,hvm-keywords-adjusted-regexp 2 'hvm-keyword-face)
@@ -156,10 +161,10 @@
     (,hvm-constructor-regexp . 'hvm-constructor-face)
     ;; Type names after 'data'
     (,hvm-datatype-regexp 1 'hvm-datatype-face)
+    ;; Superpositions and duplications (e.g., &L, !x)
+    (,hvm-prefixes-regexp . 'hvm-sup-face)
     ;; Operators
     (,hvm-operators-regexp . 'hvm-operator-face)
-    ;; Superpositions and duplications (e.g., &L, !x)
-    (,hvm-prefixes-regexp . 'hvm-supdup-face)
     ;; Functions: @fn (highlight only the identifier after @)
     (,hvm-function-regexp 1 'hvm-function-face)
     ;; Erasure: *
