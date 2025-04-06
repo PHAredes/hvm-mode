@@ -187,6 +187,17 @@
     (,hvm-delimiters-regexp . 'hvm-delimiters-face))
   "Keyword highlighting for HVM mode.")
 
+;; Customizable options for HVM flags
+(defcustom hvm-use-stats t
+  "If non-nil, include the -s flag (show statistics) in all HVM run commands."
+  :type 'boolean
+  :group 'hvm-mode)
+
+(defcustom hvm-use-compiled t
+  "If non-nil, include the -c flag (compiled mode) in all HVM run commands."
+  :type 'boolean
+  :group 'hvm-mode)
+
 ;; Disable asking about saving buffers before compilation
 (setq compilation-ask-about-save nil)
 
@@ -204,13 +215,16 @@
 
 ;; Add the function to compilation-finish-functions
 (add-hook 'compilation-finish-functions 'hvm--adjust-compilation-window-height)
-  
+
 ;; Core function to run HVM commands in a compilation buffer
-(defun hvm--run-command (command)
-  "Run COMMAND in a compilation buffer."
-  (let ((compilation-buffer-name-function (lambda (_mode) "*hvm-output*"))
-        (compilation-skip-to-next-location t))
-    (compilation-start command 'compilation-mode nil t)))
+(defun hvm--run-command (command &optional extra-flags)
+  "Run COMMAND in a compilation buffer, optionally with EXTRA-FLAGS."
+  (let* ((base-flags (concat (when hvm-use-compiled " -c")
+                             (when hvm-use-stats " -s")))
+         (full-command (concat command base-flags (when extra-flags (concat " " extra-flags))))
+         (compilation-buffer-name-function (lambda (_mode) "*hvm-output*"))
+         (compilation-skip-to-next-location t))
+    (compilation-start full-command 'compilation-mode nil t)))
 
 ;; Helper function to get the current file name
 (defun hvm--get-current-file ()
@@ -230,88 +244,65 @@
   (interactive)
   (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)))))
 
-(defun hvm-run-type ()
-  "Run `hvm run <file> -t` in a compilation buffer."
+(defun hvm-run-typecheck ()
+  "Run `hvm run <file> -t` in a compilation buffer to check types."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -t")))
-
-(defun hvm-run-hvm--run-commandd ()
-  "Run `hvm run <file> -c` in a compilation buffer."
-  (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-t"))
 
 (defun hvm-run-collapse ()
-  "Run `hvm run <file> -C` in a compilation buffer."
+  "Run `hvm run <file> -C` in a compilation buffer to collapse results."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -C")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-C"))
 
-(defun hvm-run-collapse-1 ()
-  "Run `hvm run <file> -C1` in a compilation buffer."
+(defun hvm-run-collapse-first ()
+  "Run `hvm run <file> -C1` to collapse the first result."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -C1")))
-
-(defun hvm-run-stats ()
-  "Run `hvm run <file> -s` in a compilation buffer."
-  (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -s")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-C1"))
 
 (defun hvm-run-debug ()
-  "Run `hvm run <file> -d` in a compilation buffer."
+  "Run `hvm run <file> -d` in a compilation buffer with debug output."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -d")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-d"))
 
 (defun hvm-run-no-quotes ()
-  "Run `hvm run <file> -Q` in a compilation buffer."
+  "Run `hvm run <file> -Q` in a compilation buffer without quotes."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -Q")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-Q"))
 
-(defun hvm-run-hvm--run-commandd-collapse ()
-  "Run `hvm run <file> -c -C` in a compilation buffer."
+(defun hvm-run-compiled-debug ()
+  "Run `hvm run <file> -d` in a compilation buffer with debug."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -C")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-d"))
 
-(defun hvm-run-hvm--run-commandd-stats ()
-  "Run `hvm run <file> -c -s` in a compilation buffer."
+(defun hvm-run-find-first ()
+  "Run `hvm run <file> -C1` in a compilation buffer to find first result."
   (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -s")))
-
-(defun hvm-run-hvm--run-commandd-debug ()
-  "Run `hvm run <file> -c -d` in a compilation buffer."
-  (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -d")))
-
-(defun hvm-run-find-next ()
-  "Run `hvm run <file> -c -C1 -s` in a compilation buffer."
-  (interactive)
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " -c -C1 -s")))
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) "-C1"))
 
 (defun hvm-run-with-flags (flags)
   "Run `hvm run <file>` with user-specified FLAGS in a compilation buffer."
-  (interactive "sEnter HVM flags (e.g., -c -C1): ")
-  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " " flags)))
+  (interactive "sEnter HVM flags (e.g., -t -C1): ")
+  (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) flags))
 
 ;; Keymap for hvm-mode
 (defvar hvm-mode-map
   (let ((map (make-sparse-keymap)))
     ;; Base commands (Agda-like)
-    (define-key map (kbd "C-c C-f") 'hvm-run)         ;; hvm run <file> (load/run)
+    (define-key map (kbd "C-c C-;") 'hvm-run)         ;; hvm run (load/run) no flags
     (define-key map (kbd "C-c h") 'hvm-help)          ;; hvm help
 
     ;; Single flags (inspired by Agda conventions)
-    (define-key map (kbd "C-c C-t") 'hvm-run-type)    ;; -t (type checking)
-    (define-key map (kbd "C-c C-c") 'hvm-run-compiled) ;; -c (compiled mode)
-    (define-key map (kbd "C-c C-r") 'hvm-run-collapse) ;; -C (collapse/reduce)
-    (define-key map (kbd "C-c C-1") 'hvm-run-collapse-1) ;; -C1 (collapse N=1)
-    (define-key map (kbd "C-c C-s") 'hvm-run-stats)   ;; -s (statistics)
-    (define-key map (kbd "C-c C-d") 'hvm-run-debug)   ;; -d (debug)
+    (define-key map (kbd "C-c C-t") 'hvm-run-typecheck) ;; -t (type checking)
+    (define-key map (kbd "C-c C-l") 'hvm-run-collapse)  ;; -C (collapse/reduce)
+    (define-key map (kbd "C-c C-d") 'hvm-run-debug)     ;; -d (debug)
     (define-key map (kbd "C-c C-q") 'hvm-run-no-quotes) ;; -Q (no quotes)
 
     ;; Custom commands
-    (define-key map (kbd "C-c C-l") 'hvm-run-find-next) ;; -c -C1 -s (find)
-    (define-key map (kbd "C-c C-x") 'hvm-run-with-flags) ;; Prompt for flags
+    (define-key map (kbd "C-c C-c") 'hvm-run-find-first)       ;; -C1 (find)
+    (define-key map (kbd "C-c C-x") 'hvm-run-with-flags)       ;; Prompt for flags
 
     ;; ERI indentation bindings
-    (define-key map (kbd "TAB") 'eri-indent)           ;; Indent
+    (define-key map (kbd "TAB") 'eri-indent)                     ;; Indent
     (define-key map (kbd "S-<iso-lefttab>") 'eri-indent-reverse) ;; Reverse indent
     (define-key map (kbd "S-<lefttab>") 'eri-indent-reverse)     ;; Reverse indent
     (define-key map (kbd "S-<tab>") 'eri-indent-reverse)         ;; Reverse indent
