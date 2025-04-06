@@ -187,20 +187,39 @@
     (,hvm-delimiters-regexp . 'hvm-delimiters-face))
   "Keyword highlighting for HVM mode.")
 
-;; Helper function to run HVM commands without status messages
+;; Disable asking about saving buffers before compilation
+(setq compilation-ask-about-save nil)
+
+;; Function to dynamically adjust the compilation window height
+(defun hvm--adjust-compilation-window-height (buffer &optional ignored)
+  "Adjust the compilation window height to fit the buffer content."
+  (let ((window (get-buffer-window buffer)))
+    (when window
+      (with-selected-window window
+        (let* ((line-count (count-lines (point-min) (point-max)))
+               (mode-line-height 1) ; Explicitly account for mode-line
+               (desired-height (+ line-count mode-line-height))
+               (max-height (ceiling (/ (float (frame-height)) 2)))) ; Round up
+          (fit-window-to-buffer window (min max-height desired-height)))))))
+
+;; Add the function to compilation-finish-functions
+(add-hook 'compilation-finish-functions 'hvm--adjust-compilation-window-height)
+  
+;; Core function to run HVM commands in a compilation buffer
 (defun hvm--run-command (command)
   "Run COMMAND in a compilation buffer."
   (let ((compilation-buffer-name-function (lambda (_mode) "*hvm-output*"))
         (compilation-skip-to-next-location t))
     (compilation-start command 'compilation-mode nil t)))
 
-;; Helper functions for HVM commands
+;; Helper function to get the current file name
 (defun hvm--get-current-file ()
   "Get the current HVM file name."
   (if (buffer-file-name)
       (file-name-nondirectory (buffer-file-name))
     (error "No file associated with this buffer")))
 
+;; HVM command functions
 (defun hvm-help ()
   "Run `hvm help` in a compilation buffer."
   (interactive)
@@ -272,7 +291,6 @@
   (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file)) " " flags)))
 
 ;; Keymap for hvm-mode
-;; Keymap for hvm-mode
 (defvar hvm-mode-map
   (let ((map (make-sparse-keymap)))
     ;; Base commands (Agda-like)
@@ -287,11 +305,6 @@
     (define-key map (kbd "C-c C-s") 'hvm-run-stats)   ;; -s (statistics)
     (define-key map (kbd "C-c C-d") 'hvm-run-debug)   ;; -d (debug)
     (define-key map (kbd "C-c C-q") 'hvm-run-no-quotes) ;; -Q (no quotes)
-
-    ;; Common combinations
-    (define-key map (kbd "C-c C-a") 'hvm-run-compiled-collapse) ;; -c -C (all)
-    (define-key map (kbd "C-c C-b") 'hvm-run-compiled-stats)    ;; -c -s (build)
-    (define-key map (kbd "C-c C-e") 'hvm-run-compiled-debug)    ;; -c -d (execute/debug)
 
     ;; Custom commands
     (define-key map (kbd "C-c C-l") 'hvm-run-find-next) ;; -c -C1 -s (find)
