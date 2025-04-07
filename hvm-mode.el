@@ -5,24 +5,20 @@
 
 ;;; Code:
 
-;; Require eri for indentation functions
 (require 'eri)
-
-;; Require compile for HVM tasks
 (require 'compile)
+(require 'rainbow-delimiters)
 
 ;; Syntax table
 (defvar hvm-mode-syntax-table
   (let ((st (make-syntax-table)))
-    ;; Treat underscore as part of words
     (modify-syntax-entry ?_ "w" st)
-    ;; Single-line comments with //
     (modify-syntax-entry ?/ ". 12" st)
     (modify-syntax-entry ?\n ">" st)
     st)
   "Syntax table for `hvm-mode'.")
 
-;; Define custom faces, inheriting from built-in Emacs faces
+;; Define custom faces (unchanged from original)
 (defface hvm-keyword-face
   '((t (:inherit font-lock-keyword-face)))
   "Face for HVM keywords."
@@ -34,7 +30,7 @@
   :group 'hvm-faces)
 
 (defface hvm-function-face
-  '((t (:inherit font-lock-function-name-face :italic t)))
+  '((t (:inherit font-lock-function-name-face)))
   "Face for HVM functions (e.g., @fn)."
   :group 'hvm-faces)
 
@@ -60,12 +56,12 @@
 
 (defface hvm-symbols-face
   '((t (:inherit font-lock-builtin-face)))
-  "Face for HVM symbols (~ @ ! λ)."
+  "Face for HVM symbols (~ @ λ)."
   :group 'hvm-faces)
 
 (defface hvm-sup-face
   '((t (:inherit font-lock-variable-name-face :italic t)))
-  "Face for HVM superpositions and duplications (e.g., &L, ! &n{x0 x1} = y)."
+  "Face for HVM superpositions and duplications (e.g., &, !&)."
   :group 'hvm-faces)
 
 (defface hvm-datatype-face
@@ -78,14 +74,9 @@
   "Face for HVM comments."
   :group 'hvm-faces)
 
-(defface hvm-delimiters-face
-  '((t (:inherit default)))
-  "Face for HVM parentheses and braces."
-  :group 'hvm-faces)
-
 (defface hvm-let-bindings-face
   '((t (:inherit font-lock-builtin-face)))
-  "Face for HVM let bindings"
+  "Face for HVM let bindings."
   :group 'hvm-faces)
 
 ;; Define HVM keywords and operators
@@ -94,8 +85,8 @@
   "HVM keywords.")
 
 (defvar hvm-operators
-  '("+" "-" "*" "/" "%" "=" "!" "&" "|" "^" "<" ">" "<<" "<=" ">>" ">=")
-  "HVM operators.")
+  '("+" "-" "*" "/" "%" "=" "!" "&" "|" "^" "<" ">" "<<" "<=" ">>" ">=" "==")
+  "HVM operators, including compound operators like ==.")
 
 ;; Convert lists to regex patterns
 (defvar hvm-keywords-regexp
@@ -110,9 +101,13 @@
   (concat (regexp-opt hvm-operators t) "\\s-+")
   "Regexp for HVM operators, requiring a space after the operator.")
 
-(defvar hvm-prefixes-regexp
-  "\\(&\\)\\([0-9]+\\|{\\)"
-  "Regexp for HVM sup and dup with & followed by a number or {.")
+(defvar hvm-sup-regexp
+  "\\(&\\)"
+  "Regexp for HVM superpositions (&).")
+
+(defvar hvm-dup-regexp
+  "\\(!&\\)"
+  "Regexp for HVM duplications (!&).")
 
 (defvar hvm-constructor-regexp
   "#[A-Za-z0-9_]+\\|#\."
@@ -150,29 +145,29 @@
   "\\<\\([a-zA-Z][A-Za-z0-9_]*\\)\\>"
   "Regexp for HVM variables (plain identifiers like `a`, `foo`).")
 
-(defvar hvm-delimiters-regexp
-  "[{}()[\\]]\\|}[{]\\|)\\("
-  "Regexp for HVM delimiter pairs (e.g., { }, ( ), [ ]).")
-
 (defvar hvm-let-bindings-regexp
   "\\(!\\^?\\|!!\\)\\s-"
   "Regexp for HVM let bindings (!, !!, !^) followed by whitespace.")
 
 ;; Font-lock keywords
 (defvar hvm-font-lock-keywords
-  `(;; Symbols: ~ @ λ (highest priority)
+  `(;; Duplications: !&
+    (,hvm-dup-regexp . 'hvm-sup-face)
+    ;; Superpositions: &
+    (,hvm-sup-regexp . 'hvm-sup-face)
+    ;; Symbols: ~ @ λ
     (,hvm-symbols-regexp . 'hvm-symbols-face)
-    ;; Adjusted Keywords to not match inside constructors
+    ;; Keywords: data import
     (,hvm-keywords-adjusted-regexp 2 'hvm-keyword-face)
-    ;; Constructors (e.g., #Nil, #Cons, #.)
+    ;; Constructors: #Name
     (,hvm-constructor-regexp . 'hvm-constructor-face)
-    ;; Type names after 'data'
+    ;; Datatype names: after data
     (,hvm-datatype-regexp 1 'hvm-datatype-face)
-    ;; Superpositions and duplications (e.g., &L, !x)
-    (,hvm-prefixes-regexp . 'hvm-sup-face)
-    ;; Operators
+    ;; Let bindings: ! !! !^ followed by space
+    (,hvm-let-bindings-regexp . 'hvm-let-bindings-face)
+    ;; Operators: + - * etc. followed by space
     (,hvm-operators-regexp . 'hvm-operator-face)
-    ;; Functions: @fn (highlight only the identifier after @)
+    ;; Functions: @fn (highlight identifier after @)
     (,hvm-function-regexp 1 'hvm-function-face)
     ;; Erasure: *
     (,hvm-erasure-regexp . 'hvm-operator-face)
@@ -180,11 +175,10 @@
     (,hvm-number-regexp . 'hvm-number-face)
     ;; Characters: 'a'
     (,hvm-char-regexp . 'hvm-char-face)
-    ;; Comments: // and everything after
+    ;; Comments: //
     (,hvm-comment-regexp . 'hvm-comment-face)
-    ;; Variables (plain identifiers like 'a', 'foo')
-    (,hvm-variable-regexp . 'hvm-variable-face)
-    (,hvm-delimiters-regexp . 'hvm-delimiters-face))
+    ;; Variables: identifiers
+    (,hvm-variable-regexp . 'hvm-variable-face))
   "Keyword highlighting for HVM mode.")
 
 ;; Customizable options for HVM flags
@@ -208,7 +202,7 @@
     (when window
       (with-selected-window window
         (let* ((line-count (count-lines (point-min) (point-max)))
-               (mode-line-height 1) ; Explicitly account for mode-line
+               (mode-line-height 2) ; Explicitly account for mode-line
                (desired-height (+ line-count mode-line-height))
                (max-height (ceiling (/ (float (frame-height)) 2)))) ; Round up
           (fit-window-to-buffer window (min max-height desired-height)))))))
@@ -227,11 +221,22 @@
     (compilation-start full-command 'compilation-mode nil t)))
 
 ;; Helper function to get the current file name
+;; Modified hvm--get-current-file to support literate HVM files
 (defun hvm--get-current-file ()
-  "Get the current HVM file name."
-  (if (buffer-file-name)
-      (file-name-nondirectory (buffer-file-name))
-    (error "No file associated with this buffer")))
+  "Get the effective file to use for HVM commands.
+For regular HVM files (*.hvm), return the base name.
+For literate HVM files (*.hvm.md), extract HVM code blocks to a temporary file
+and return its full path."
+  (let ((file (buffer-file-name)))
+    (if (and file (string-match-p "\\.hvm\\.md\\'" file))
+        (let ((code (hvm--extract-hvm-code)))
+          (let ((temp-file (make-temp-file "hvm-literate-" nil ".hvm")))
+            (with-temp-file temp-file
+              (insert code))
+            temp-file))
+      (if file
+          (file-name-nondirectory file)
+        (error "No file associated with this buffer")))))
 
 ;; HVM command functions
 (defun hvm-help ()
@@ -284,6 +289,24 @@
   (interactive "sEnter HVM flags (e.g., -t -C1): ")
   (hvm--run-command (concat "hvm run " (shell-quote-argument (hvm--get-current-file))) flags))
 
+;; Function to extract HVM code blocks from the current buffer's content
+(defun hvm--extract-hvm-code ()
+  "Extract HVM code blocks from the current buffer's content.
+Collects all lines within ```hvm ... ``` blocks, excluding the fences,
+and returns them as a single string with preserved newlines."
+  (let ((lines (split-string (buffer-string) "\n"))
+        (code "")
+        (in-block nil))
+    (dolist (line lines)
+      (cond
+       ((and (not in-block) (string-equal line "```hvm"))
+        (setq in-block t))
+       ((and in-block (string-equal line "```"))
+        (setq in-block nil))
+       (in-block
+        (setq code (concat code line "\n")))))
+    code))
+
 ;; Keymap for hvm-mode
 (defvar hvm-mode-map
   (let ((map (make-sparse-keymap)))
@@ -315,7 +338,8 @@
   :syntax-table hvm-mode-syntax-table
   (setq font-lock-defaults '(hvm-font-lock-keywords))
   (setq comment-start "//")
-  (setq comment-end ""))
+  (setq comment-end "")
+  (rainbow-delimiters-mode 0))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hvm\\'" . hvm-mode))
