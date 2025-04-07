@@ -195,20 +195,24 @@
 ;; Disable asking about saving buffers before compilation
 (setq compilation-ask-about-save nil)
 
-;; Function to dynamically adjust the compilation window height
-(defun hvm--adjust-compilation-window-height (buffer &optional ignored)
-  "Adjust the compilation window height to fit the buffer content."
-  (let ((window (get-buffer-window buffer)))
-    (when window
-      (with-selected-window window
-        (let* ((line-count (count-lines (point-min) (point-max)))
-               (mode-line-height 2) ; Explicitly account for mode-line
-               (desired-height (+ line-count mode-line-height))
-               (max-height (ceiling (/ (float (frame-height)) 2)))) ; Round up
-          (fit-window-to-buffer window (min max-height desired-height)))))))
+;; Function to display compilation buffer
+(defun hvm--display-compilation-right (buffer &optional _)
+  "Display BUFFER in a side windows, about 40% of the frame width."
+  (let ((existing-window (get-buffer-window buffer t)) ; Check all frames
+        (window))
+    (if existing-window
+        ;; If the buffer is already displayed, reuse that window
+        (setq window existing-window)
+      ;; Otherwise, create a new window on the right
+      (setq window (split-window-right (round (* (frame-width) -0.40))))
+      (set-window-buffer window buffer)
+      (set-window-dedicated-p window t)) ; Prevent other buffers from using this window
+    (with-selected-window window
+      (fit-window-to-buffer window nil nil nil (round (* (frame-width) 0.40))))
+    window))
 
-;; Add the function to compilation-finish-functions
-(add-hook 'compilation-finish-functions 'hvm--adjust-compilation-window-height)
+;; Hook this into the compilation buffer display
+(add-to-list 'display-buffer-alist '("\\*hvm-output\\*" (hvm--display-compilation-right)))
 
 ;; Core function to run HVM commands in a compilation buffer
 (defun hvm--run-command (command &optional extra-flags)
@@ -339,10 +343,11 @@ and returns them as a single string with preserved newlines."
   (setq font-lock-defaults '(hvm-font-lock-keywords))
   (setq comment-start "//")
   (setq comment-end "")
-  (rainbow-delimiters-mode 0))
+  (rainbow-delimiters-mode 1))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hvm\\'" . hvm-mode))
+(add-to-list 'auto-mode-alist '("\\.hvm\\.md\\'" . hvm-mode))
 
 (provide 'hvm-mode)
 
