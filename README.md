@@ -1,10 +1,10 @@
 # HVM Mode
 
-HVM Mode is a major mode for editing HVM3 files in Emacs, providing syntax highlighting, keybindings for running HVM commands, and indentation support.
+HVM Mode is a major mode for editing HVM3 files with syntax coloring, keybindings for running HVM commands, indentation and a primitive literate programming alike.
 
 ## Description
 
-HVM Mode enhances the experience of editing HVM3 files in Emacs by offering comprehensive syntax highlighting, convenient keybindings for interacting with the HVM interpreter, and indentation support via the ERI library. It also supports literate HVM files (`.hvm.md`) by extracting code blocks for execution, making it a versatile tool for HVM3 development.
+HVM Mode is designed to provide a convenient and efficient way to edit HVM3 files in Emacs. It provides syntax highlighting, keybindings for interacting with the HVM interpreter, and indentation support via the ERI library. It also supports literate HVM files (`.hvm.md`) by extracting code blocks for execution, in a very initial stage for literate programming.
 
 ## Features
 
@@ -18,7 +18,7 @@ HVM Mode enhances the experience of editing HVM3 files in Emacs by offering comp
   - Characters (e.g., `'a'`)  
   - Operators (e.g., `+`, `-`, `==`)  
   - Symbols (e.g., `~`, `@`, `λ`)  
-  - Superpositions and duplications (e.g., `&`, `!&`)  
+  - Superpositions and duplications (e.g., `&{a0 a1}`, `!&{a0 a1} = foo`)  
   - Datatypes (e.g., `Nat` in `data Nat`)  
   - Comments (e.g., `// comment`)  
   - Let bindings (e.g., `!`, `!!`, `!^`)  
@@ -26,7 +26,7 @@ HVM Mode enhances the experience of editing HVM3 files in Emacs by offering comp
 - **Keybindings**:  
   Provides shortcuts for running HVM commands in a compilation buffer:  
   - `C-c C-;` : Run `hvm run <file>` (load and run the current file)  
-  - `C-c h` : Run `hvm help`  
+  - `C-c h`   : Run `hvm help`  
   - `C-c C-t` : Run `hvm run <file> -t` (type checking)  
   - `C-c C-l` : Run `hvm run <file> -C` (collapse/reduce)  
   - `C-c C-d` : Run `hvm run <file> -d` (debug)  
